@@ -211,28 +211,37 @@ public class AuthHandler : MonoBehaviour
     IEnumerator GetLeaderboardCoroutine()
     {
         UnityWebRequest www = UnityWebRequest.Get(apiiUrl + "/api/usuarios?limit=10&sort=true");
-        www.SetRequestHeader("x-token", Token);
+    www.SetRequestHeader("x-token", Token);
 
-        yield return www.SendWebRequest();
+    yield return www.SendWebRequest();
 
-        if (www.result != UnityWebRequest.Result.Success)
+    if (www.result != UnityWebRequest.Result.Success)
+    {
+        Debug.LogError("Error obteniendo leaderboard: " + www.error);
+    }
+    else
+    {
+        UsersResponse response = JsonUtility.FromJson<UsersResponse>(www.downloadHandler.text);
+        
+        // 🔥 ORDENAR AQUÍ
+        response.usuarios.Sort((a, b) =>
         {
-            Debug.LogError("Error obteniendo leaderboard: " + www.error);
-        }
-        else
-        {
-            UsersResponse response = JsonUtility.FromJson<UsersResponse>(www.downloadHandler.text);
-            
-            panelLogged.SetActive(false);
-            panelLeaderboard.SetActive(true);
+            int scoreA = a.data != null ? a.data.score : 0;
+            int scoreB = b.data != null ? b.data.score : 0;
+            return scoreB.CompareTo(scoreA); // mayor a menor
+        });
 
-            leaderboardText.text = "--- PLAYERS ---\n\n";
-            foreach (User u in response.usuarios)
-            {
-                int playerScore = u.data != null ? u.data.score : 0;
-                leaderboardText.text += $"{u.username} : {playerScore} pts\n";
-            }
+        panelLogged.SetActive(false);
+        panelLeaderboard.SetActive(true);
+
+        leaderboardText.text = "--- PLAYERS ---\n\n";
+
+        foreach (User u in response.usuarios)
+        {
+            int playerScore = u.data != null ? u.data.score : 0;
+            leaderboardText.text += $"{u.username} : {playerScore} pts\n";
         }
+    }
     }
 
     public void CloseLeaderboard()
